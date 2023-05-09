@@ -103,7 +103,7 @@ Type
 
   TDBCustomHTMLInputElementAction = class(TDBCustomHTMLElementAction)
   Private
-    procedure DoKeyDown(aEvent: TJSEvent); virtual;
+    procedure DoKeyDown(aEvent: TJSEvent); override;
     Procedure ActiveChanged; override;
     Procedure StartEditing; override;
     Procedure EndEditing; override;
@@ -486,12 +486,15 @@ procedure TDBCustomHTMLInputElementAction.BindEvents(aEl: TJSElement);
 begin
   inherited BindEvents(aEl);
   aEl.addEventListener(sEventKeyDown,@DoKeyDown);
+  if SameText(aEl.tagName,'select') then
+    aEl.addEventListener(sEventClick,@DoKeyDown);
 end;
 
 procedure TDBCustomHTMLInputElementAction.DoKeyDown(aEvent : TJSEvent);
 
 begin
-  if aEvent is TJSKeyboardEvent then
+  if (aEvent is TJSKeyboardEvent)
+     or (aEvent is TJSMouseEvent) then
     begin
     if not Link.Edit then
       begin
