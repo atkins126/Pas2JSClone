@@ -2340,6 +2340,8 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     Function toDataURL(aMimeType : String) : String; overload;
     Function toDataURL(aMimeType : String; aQuality : Double) : String; overload;
   end;
+  
+
 
   TJSHTMLProgressElement = class external name 'HTMLProgressElement' (TJSHTMLElement)
   private
@@ -2552,6 +2554,27 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     property strokeStyleAsGradient : TJSCanvasGradient Read FstrokeStyleGradient Write FstrokeStyleGradient;
     property strokeStyleAsPattern : TJSCanvasPattern Read FstrokeStylePattern Write FstrokeStylePattern;
   end;
+  
+  TJSImageBitmap = class external name 'ImageBitmap'  (TJSObject)
+  public
+    procedure    close();
+  end;
+
+  TJSOffscreenCanvasRenderingContext2D = class external name 'CanvasRenderingContext2D'  (TJSCanvasRenderingContext2D)
+  private
+  Public
+     { subclassing TJSCanvasRenderingContext2D just in case some new methods are required}
+  end;
+
+  TJSHTMLOffscreenCanvasElement = Class external name 'OffscreenCanvas' (TJSHTMLCanvasElement)
+  Public
+    constructor New(x,y : Cardinal); overload;
+    { getContextAs2DContext reintroduced here to return the subclassed context }
+    Function getContextAs2DContext(contextType : string; contextAttributes : TJSObject) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext';
+    Function getContextAs2DContext(contextType : string) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext';
+    function transferToImageBitmap: TJSImageBitmap;
+  end;
+  
 
   { TJSHTMLIFrameElement }
 
