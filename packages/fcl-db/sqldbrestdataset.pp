@@ -156,6 +156,11 @@ Type
     Property ServerSortFields : String Read FServerSortFields Write SetServerSortFields;
     // Fields in ServerSortFields that must be descending
     Property ServerSortDescFields : String Read FServerSortDescFields Write SetServerSortDescFields;
+    Property BeforeApplyUpdates;
+    Property AfterApplyUpdates;
+    property AfterRefresh;
+    Property OnRecordResolved;
+    property OnLoadFail;
   end;
 
 implementation
