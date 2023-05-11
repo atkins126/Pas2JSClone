@@ -3325,6 +3325,12 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     procedure reset;
   end;
 
+  TJSXMLSerializer = class external name 'XMLSerializer' (TJSObject)
+  public
+    function serializeToString(aRoot: TJSNode): string;
+  end;
+
+
 var
   document : TJSDocument; external name 'document';
   window : TJSWindow; external name 'window';
