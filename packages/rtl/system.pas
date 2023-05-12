@@ -76,7 +76,6 @@ type
   TTime = type TDateTime;
   TDate = type TDateTime;
 
-
   Int64 = type NativeInt unimplemented; // only 53 bits at runtime
   UInt64 = type NativeUInt unimplemented; // only 52 bits at runtime
   QWord = type NativeUInt unimplemented; // only 52 bits at runtime
@@ -85,8 +84,10 @@ type
   NativeLargeInt = NativeInt;
   NativeLargeUInt = NativeUInt;
 
+  UnicodeChar = Char;
+  UnicodeString = type String;
   WideString = type String;
-  UnicodeChar = char;
+  WideChar = Char;
 
   TDynArrayIndex = NativeInt;
   TTextLineBreakStyle = (tlbsLF,tlbsCRLF,tlbsCR);
