@@ -9931,61 +9931,64 @@ begin
     end;
 end;
 
-function InitInheritedComponent(Instance: TComponent; RootAncestor: TClass): Boolean;
-Var
-  I : Integer;
+function FindInitComponentHandler(const ComponentClass: TComponentClass; var Handler: TInitHandler): Boolean;
+var
+  A: Integer;
+
 begin
-  I:=0;
-  if not Assigned(InitHandlerList) then begin
-    Result := True;
-    Exit;
+  Result := False;
+
+  if not Assigned(InitHandlerList) then
+    InitHandlerList := TList.Create;
+
+  for A := 0 to Pred(InitHandlerList.Count) do
+  begin
+    Handler := TInitHandler(InitHandlerList.Items[A]);
+
+    if Handler.AClass = ComponentClass then
+      Exit(True);
   end;
-  Result:=False;
-  With InitHandlerList do
-    begin
-    I:=0;
-    // Instance is the normally the lowest one, so that one should be used when searching.
-    While Not result and (I<Count) do
-      begin
-      If (Instance.InheritsFrom(TInitHandler(Items[i]).AClass)) then
-        Result:=TInitHandler(Items[i]).AHandler(Instance,RootAncestor);
-      Inc(I);
-      end;
-    end;
 end;
 
-
-
-procedure RegisterInitComponentHandler(ComponentClass: TComponentClass;   Handler: TInitComponentHandler);
-
-Var
-  I : Integer;
-  H: TInitHandler;
+function AddInitComponentHandler(const ComponentClass: TComponentClass; const Handler: TInitComponentHandler; const ForceInsert: Boolean): TInitHandler;
 begin
-  If (InitHandlerList=Nil) then
-    InitHandlerList:=TList.Create;
-  H:=TInitHandler.Create;
-  H.Aclass:=ComponentClass;
-  H.AHandler:=Handler;
-  try
-    With InitHandlerList do
-      begin
-        I:=0;
-        While (I<Count) and not H.AClass.InheritsFrom(TInitHandler(Items[I]).AClass) do
-          Inc(I);
-        { override? }
-        if (I<Count) and (TInitHandler(Items[I]).AClass=H.AClass) then
-          begin
-            TInitHandler(Items[I]).AHandler:=Handler;
-            H.Free;
-          end
-        else
-          InitHandlerList.Insert(I,H);
-      end;
-   except
-     H.Free;
-     raise;
+  if ForceInsert or not FindInitComponentHandler(ComponentClass, Result) then
+  begin
+    Result := TInitHandler.Create;
+    Result.AClass := ComponentClass;
+
+    InitHandlerList.Add(Result);
   end;
+
+  Result.AHandler := Handler;
+end;
+
+function InitInheritedComponent(Instance: TComponent; RootAncestor: TClass): Boolean;
+Var
+  I: Integer;
+
+  Handler: TInitHandler;
+
+  ComponentClass: TComponentClass;
+
+begin
+  Handler := nil;
+  Result := not Assigned(InitHandlerList);
+
+  if not Result then
+  begin
+    ComponentClass := TComponentClass(Instance.ClassType);
+
+    if not FindInitComponentHandler(ComponentClass, Handler) then
+      Handler := AddInitComponentHandler(ComponentClass, @DefaultInitHandler, True);
+
+    Result := Handler.AHandler(Instance,RootAncestor);
+  end;
+end;
+
+procedure RegisterInitComponentHandler(ComponentClass: TComponentClass; Handler: TInitComponentHandler);
+begin
+  AddInitComponentHandler(ComponentClass, Handler, False);
 end;
 
 
