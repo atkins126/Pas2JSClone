@@ -9964,9 +9964,7 @@ begin
 end;
 
 function InitInheritedComponent(Instance: TComponent; RootAncestor: TClass): Boolean;
-Var
-  I: Integer;
-
+var
   Handler: TInitHandler;
 
   ComponentClass: TComponentClass;
