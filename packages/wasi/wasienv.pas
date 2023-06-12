@@ -250,6 +250,8 @@ Const
 
 
 type
+  EWasiError = Class(Exception);
+
   // The imports as expected by WASI
   IWASI = interface ['{A03AC61B-3C68-4DA8-AC4F-53ED01814673}']
     // Please keep these sorted !!
@@ -696,6 +698,8 @@ begin
       FPreparedStartDescriptor.RunExceptionMessage:=TJSJSON.Stringify(OE);
       end;
   end;
+  if FPreparedStartDescriptor.RunExceptionClass<>'' then
+    Console.log('Running Webassembly resulted in exception. Exception class: ',FPreparedStartDescriptor.RunExceptionClass,', message:',FPreparedStartDescriptor.RunExceptionMessage);
 end;
 
 procedure TWASIHost.DoStdWrite(Sender: TObject; const aOutput: String);
@@ -794,6 +798,7 @@ function TWASIHost.RunWebAssemblyInstance(aDescr: TWebAssemblyStartDescriptor;
   aAfterStart: TAfterStartCallback): Boolean;
 
 begin
+  FPreparedStartDescriptor:=aDescr;
   Result:=RunWebAssemblyInstance(aBeforeStart,aAfterStart,Nil);
 end;
 
@@ -809,6 +814,8 @@ Var
 
   begin
     Result:=True;
+    if not (jsTypeOf(aValue)='object') then
+      Raise EWasiError.Create('Did not get a instantiated webassembly');
     WASD.Instance:=InstResult.Instance;
     WASD.Module:=InstResult.Module;
     WASD.Exported:=TWASIExports(TJSObject(WASD.Instance.exports_));
@@ -1089,9 +1096,9 @@ end;
 
 function TPas2JSWASIEnvironment.GetMemory: TJSWebassemblyMemory;
 begin
-  if Assigned(FMemory) then
+{  if Assigned(FMemory) then
     Result:=FMemory
-  else
+  else }
     Result:= FModuleInstanceExports.Memory;
 end;
 
