@@ -51,12 +51,14 @@ type
   end;
 
   { TBSTableColumn }
+  TBSColumnClickEvent = Procedure(Sender : TObject; Event : TJSObject; aRowData : TJSObject; aRowIndex : Integer) of Object;
 
   TBSTableColumn = class(TCollectionItem)
   private
     FElementID: string;
     FFieldName: string;
     FFormatting: string;
+    FOnButtonClick: TBSColumnClickEvent;
     FSelectable: Boolean;
     FTitle: string;
     FRenderMode: TColumnRenderMode;
@@ -128,7 +130,8 @@ type
     property ExtraAttributes: String read FExtraAttributes write FExtraAttributes;
     // Selectable ? This is a native bootstrap-table select column
     Property Selectable : Boolean Read FSelectable Write FSelectable;
-
+    // On click. Sender will be this column
+    Property OnButtonClick : TBSColumnClickEvent Read FOnButtonClick Write FOnButtonClick;
   end;
 
   TBSTableColumns = class(TCollection)
@@ -145,6 +148,7 @@ type
   end;
 
   TOnCreatedRowEvent = reference to function(row: TJSNode; Data: TJSArray; dataIndex: Integer): JSValue;
+  TRowSelectEvent = Procedure(Sender : TObject; aRow : TJSObject; aField : String) of object;
 
   { TTableDataLink }
 
@@ -184,6 +188,7 @@ type
   TCustomDBBootstrapTableWidget = class(TWebWidget)
   private
     FAfterBodyDraw: TNotifyEvent;
+    FOnDoubleClickRow: TRowSelectEvent;
     FStylingClasses: TStylingClasses;
     FLink : TTableDataLink;
     FColumns: TBSTableColumns;
@@ -197,8 +202,11 @@ type
     FTableViewOptions: TBSTableViewOptions;
     FShowSearch: Boolean;
     FReadOnly: Boolean;
+    procedure DoDoubleClickRow(aRow: TJSOBject; El: TJSHTMLElement;
+      aField: String);
     function GetData: TJSArray;
     function GetDataFromDataset: TJSArray;
+    function GetDataset: TDataset;
     function GetDatasource: TDataSource;
     function IsOptionsStored: Boolean;
     function IsPaginationOptionsStored: Boolean;
@@ -218,6 +226,7 @@ type
   Protected
     // Called from datalink
     Procedure ActiveChanged; virtual;
+    function HTMLTag: String; override;
     procedure DoAfterBodyDraw(aData : JSValue);
     procedure ApplyPaginationOptions(aOptions: TBootstrapTableOptions); virtual;
     procedure ApplySearchOptions(aOptions: TBootstrapTableOptions); virtual;
@@ -246,7 +255,8 @@ type
     procedure ConfigureOptions(aOptions: TBootstrapTableOptions); virtual;
     // Defines the sorting functions (TODO: Refactoring => Move the function definitions to the table instead of the column)
     procedure DefineSortingFunctions;
-    { private declarations }
+
+    property Dataset : TDataset Read GetDataset;
   public
     class var DefaultLanguage : TJSObject;
   public
@@ -261,6 +271,8 @@ type
     procedure ApplyWidgetSettings(aElement: TJSHTMLElement); override;
     // Show a spinner
     procedure ShowLoading;
+    // Refresh data and re-render
+    Procedure RefreshData;
     // Data to be rendered
     property Data: TJSArray read GetData write SetData;
     // Below protected section can be published
@@ -285,6 +297,8 @@ type
     property DisplayReadOnly : Boolean read FReadOnly write SetReadOnly;
       // Called after the table has completed drawing
     Property AfterBodyDraw : TNotifyEvent Read FAfterBodyDraw Write FAfterBodyDraw;
+    // Called when the user double-clicks a row
+    Property OnDoubleClickRow : TRowSelectEvent Read FOnDoubleClickRow Write FOnDoubleClickRow;
    end;
 
   TDBBootstrapTableWidget = class(TCustomDBBootstrapTableWidget)
@@ -299,6 +313,7 @@ type
     Property SortOptions;
     property DisplayReadOnly;
     Property AfterBodyDraw;
+    Property OnDoubleClickRow;
   end;
 
 Const
@@ -400,6 +415,7 @@ begin
     DtType := Src.DtType;
     OnGetSortValue := Src.OnGetSortValue;
     ExtraAttributes := Src.ExtraAttributes;
+    OnButtonClick := Src.OnButtonClick;
   end
   else
     inherited;
@@ -523,11 +539,27 @@ begin
       end;
 end;
 
+function TCustomDBBootstrapTableWidget.GetDataset: TDataset;
+begin
+  if Assigned(Datasource) then
+    Result:=Datasource.Dataset
+  else
+    Result:=Nil;
+end;
+
 function TCustomDBBootstrapTableWidget.GetData: TJSArray;
 begin
   if FData=Nil then
     FData:=GetDataFromDataset;
   Result:=FData;
+end;
+
+procedure TCustomDBBootstrapTableWidget.DoDoubleClickRow(aRow: TJSOBject;
+  El: TJSHTMLElement; aField: String);
+begin
+  Writeln('In double click of row');
+  if Assigned(FOnDoubleClickRow) then
+    FOnDoubleClickRow(Self,aRow,aField);
 end;
 
 function TCustomDBBootstrapTableWidget.GetDatasource : TDataSource;
@@ -541,7 +573,8 @@ begin
   FLink.DataSource:=aValue
 end;
 
-procedure TCustomDBBootstrapTableWidget.SeTStylingClasses(AValue: TStylingClasses);
+procedure TCustomDBBootstrapTableWidget.SetStylingClasses(
+  AValue: TStylingClasses);
 begin
   if FStylingClasses=AValue then Exit;
   FStylingClasses.Assign(AValue);
@@ -673,11 +706,10 @@ end;
 
 function TCustomDBBootstrapTableWidget.MakeButtonCol(aCol: TBootstrapTableColumn; aTableCol: TBSTableColumn): TBootstrapTableColumn;
 
-  function renderCallBack(Data: JSValue; row: TJSObject; RowIndex : Integer; Field : string): JSValue;
+var
+  tagName, classnames, sIcon: string;
 
-  var
-    classnames, tagName,sIcon: string;
-    sUrl, sExtraAttributes: string;
+  procedure PrepareRender;
 
   begin
     classnames:= StylingClasses.ButtonClass;
@@ -691,30 +723,54 @@ function TCustomDBBootstrapTableWidget.MakeButtonCol(aCol: TBootstrapTableColumn
       cbtCustom:
         sIcon := aTableCol.ButtonIconClass;
     End;
-    sUrl := ReplaceMoustache(row, aTableCol.ButtonURL);
-
-    sExtraAttributes := ReplaceMoustache(row, aTableCol.ExtraAttributes);
-
     if (aTableCol.ButtonType=cbtDelete) and DisplayReadOnly then
       begin
       tagName:='div';
-      Surl:='';
       classnames:=classnames+' disabled';
-      end
-    else
-      begin
-      tagName:='a';
-      if aTableCol.ButtonURLTarget<>'' then
-        sExtraAttributes:=sExtraAttributes+' target="'+aTableCol.ButtonURLTarget+'"';
-      sUrl:=Format('href="%s"',[sUrl]);
       end;
-    Result := Format('<%s class="%s" %s %s><i class="%s"></i></%s> ',
-        [tagName, classnames, sUrl, sExtraAttributes, sIcon, tagName])
+    if aTableCol.ButtonURL<>'' then
+      tagName:='a'
+    else
+      tagName:='span';
+  end;
+
+  function renderCallBack(Data: JSValue; row: TJSObject; RowIndex : Integer; Field : string): JSValue;
+
+  var
+    sUrl, sExtraAttributes: string;
+
+  begin
+    sUrl:='';
+    sExtraAttributes := ReplaceMoustache(row, aTableCol.ExtraAttributes);
+    if not ((aTableCol.ButtonType=cbtDelete) and DisplayReadOnly) then
+      if aTableCol.ButtonURL<>'' then
+        begin
+        sUrl := ReplaceMoustache(row, aTableCol.ButtonURL);
+        sUrl:=Format('href="%s"',[sUrl]);
+        if aTableCol.ButtonURLTarget<>'' then
+          sExtraAttributes:=sExtraAttributes+' target="'+aTableCol.ButtonURLTarget+'"';
+        end;
+    if (tagName='a') and (sURL='') then
+      sURL:='href="javascript.void()"';
+    Result:=Format('<%s class="%s" %s %s><i class="%s"></i></%s> ',
+                   [tagName, classnames, sUrl, sExtraAttributes, sIcon, tagName])
+  end;
+
+  function doclick(e : TJSEvent; value : JSValue; row: TJSObject; index : NativeInt) : JSValue;
+  begin
+    if assigned(aTableCol.OnButtonClick) then
+      aTableCol.OnButtonClick(aTableCol,E,row,index);
   end;
 
 begin
   Result:=aCol;
+  PrepareRender;
   Result.Formatter := @renderCallBack;
+  if Assigned(aTableCol.OnButtonClick) then
+    begin
+    Result.events:=TJSObject.new;
+    Result.events['click '+tagname]:=@DoClick;
+    end;
 end;
 
 function TCustomDBBootstrapTableWidget.MakeCheckBoxCol(aCol: TBootstrapTableColumn; aTableCol: TBSTableColumn): TBootstrapTableColumn;
@@ -924,6 +980,7 @@ begin
   ApplyViewOptions(aOptions);
   aOptions.Data := Data;
   aOptions.onPostBody:=@DoAfterBodyDraw;
+  aOptions.onDblClickRow:=@DoDoubleClickRow;
 end;
 
 
@@ -1007,7 +1064,12 @@ end;
 
 procedure TCustomDBBootstrapTableWidget.ActiveChanged;
 begin
-  Refresh
+  RefreshData;
+end;
+
+function TCustomDBBootstrapTableWidget.HTMLTag: String;
+begin
+  Result:='table';
 end;
 
 procedure TCustomDBBootstrapTableWidget.DoAfterBodyDraw(aData: JSValue);
@@ -1035,6 +1097,12 @@ begin
           ('<tbody><tr><td colspan="100%" style="text-align: center;"> <i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Bezig met laden..</span></td></tr></tbody>');
     end;
   end;
+end;
+
+procedure TCustomDBBootstrapTableWidget.RefreshData;
+begin
+  Data:=Nil;
+  Refresh;
 end;
 
 
