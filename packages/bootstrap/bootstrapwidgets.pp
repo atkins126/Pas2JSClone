@@ -212,11 +212,13 @@ Type
     FFocus: Boolean;
     FKeyBoard: Boolean;
     FOnHide: TOnModalHideEvent;
+    FOnShow: TNotifyEvent;
     FShowOnRender: Boolean;
     FTemplate: String;
     FShowing : Boolean;
     FTemplateLoader: TCustomTemplateLoader;
     FTemplateName: String;
+    FJQueryInitialized : Boolean;
     function GetModalReferences: TModalReferences;
     function HideClick(Event: TJSEvent): Boolean;
     procedure SetModalReferences(AValue: TModalReferences);
@@ -224,7 +226,8 @@ Type
     procedure SetTemplateName(AValue: String);
     procedure SetTemplate(AValue: String);
   protected
-    Function BootstrapHide(Event : TJSEvent) : Boolean;
+    Function BootstrapHide(Event : TJSEvent) : Boolean; virtual;
+    Function BootstrapShow(Event : TJSEvent) : Boolean; virtual;
     Function DoRenderHTML(aParent, aElement: TJSHTMLElement): TJSHTMLElement; override;
     Function GetTemplateHTML: String; override;
     procedure ApplyWidgetSettings(aElement: TJSHTMLElement); override;
@@ -238,6 +241,7 @@ Type
     Procedure Show;
     Procedure Hide;
     Property Showing : Boolean Read FShowing;
+    property reference;
   Published
     Property ShowOnRender: Boolean Read FShowOnRender Write FShowOnrender;
     Property BackDrop : Boolean Read FBackDrop Write FBackDrop;
@@ -247,6 +251,7 @@ Type
     Property TemplateName : String Read FTemplateName Write SetTemplateName;
     Property TemplateLoader : TCustomTemplateLoader Read FTemplateLoader Write SetTemplateLoader;
     Property OnHide : TOnModalHideEvent Read FOnHide Write FOnHide;
+    Property OnShow : TNotifyEvent Read FOnShow Write FOnShow;
     Property References : TModalReferences Read GetModalReferences Write SetModalReferences;
   end;
 
@@ -837,6 +842,13 @@ begin
     end;
 end;
 
+function TBootstrapModal.BootstrapShow(Event: TJSEvent): Boolean;
+begin
+  Result:=True;
+  if Assigned(FonShow) then
+    FOnShow(Self);
+end;
+
 function TBootstrapModal.DoRenderHTML(aParent, aElement: TJSHTMLElement): TJSHTMLElement;
 
 begin
@@ -847,6 +859,8 @@ end;
 procedure TBootstrapModal.ApplyWidgetSettings(aElement: TJSHTMLElement);
 
 begin
+  if FixedElementID and FJQueryInitialized then
+    exit;
   JQuery(aElement).modal(New([
     'backdrop', BackDrop,
     'keyboard', keyboard,
@@ -854,6 +868,8 @@ begin
     'show',ShowOnRender
   ]));
   jQuery(aElement).on_('hidden.bs.modal',@BootstrapHide);
+  jQuery(aElement).on_('shown.bs.modal',@BootstrapShow);
+  FJQueryInitialized:=True;
 end;
 
 function TBootstrapModal.GetTemplateHTML: String;
@@ -873,6 +889,12 @@ begin
   E:=References.FindElementByName('OK');
   if (E<>Nil) then
     jQuery(E).on_('click',@HideClick);
+  E:=References.FindElementByName('Cancel');
+  if (E<>Nil) then
+    jQuery(E).on_('click',@HideClick);
+  E:=References.FindElementByName('No');
+  if (E<>Nil) then
+    jQuery(E).on_('click',@HideClick);
   for I:=0 to References.Count-1 do
     begin
     MR:=References[i];
@@ -884,7 +906,7 @@ begin
         else
           For E in MR.Elements do
             jQuery(E).on_('click',@HideClick);
-        end
+      end
     else if (MR.Kind=mikValue) then
       begin
       if (MR.element<>Nil) and (MR.InitialValue<>'') then
@@ -912,6 +934,7 @@ begin
   FHideEl:=Nil;
   if not IsRendered then
     Refresh;
+  JQuery(Element).Modal;
   JQuery(Element).ModalShow;
   FShowing:=True;
 end;
