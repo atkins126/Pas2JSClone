@@ -307,7 +307,10 @@ type
   // Standard FPC exports.
   TWASIExports = Class External name 'Object' (TJSModulesExports)
   Public
+    // Program
     Procedure start; external name '_start';
+    // Library
+    Procedure initialize; external name '_initialize';
     function AllocMem(aSize : Integer) : Integer; external name 'wasiAlloc';
     function freeMem(aLocation : Integer) : Integer; external name 'wasiFree';
   end;
@@ -497,6 +500,8 @@ type
     FReadLineCount : Integer;
     FRunEntryFunction: String;
     FTableDescriptor : TJSWebAssemblyTableDescriptor;
+    function GetIsLibrary: Boolean;
+    function GetIsProgram: Boolean;
     function GetStartDescriptorReady: Boolean;
     function GetUseSharedMemory: Boolean;
     procedure SetPredefinedConsoleInput(AValue: TStrings);
@@ -539,7 +544,7 @@ type
     // Load and start webassembly. If DoRun is true, then Webassembly entry point is called.
     // If aBeforeStart is specified, then it is called prior to calling run, and can disable running.
     // If aAfterStart is specified, then it is called after calling run. It is not called if running was disabled.
-    Procedure StartWebAssembly(aPath: string; DoRun: Boolean;  aBeforeStart: TBeforeStartCallback; aAfterStart: TAfterStartCallback);
+    function StartWebAssembly(aPath: string; DoRun: Boolean;  aBeforeStart: TBeforeStartCallback; aAfterStart: TAfterStartCallback) : TJSPromise;
     // Run the prepared descriptor
     Procedure RunPreparedDescriptor;
     // Initial memory descriptor
@@ -554,7 +559,10 @@ type
     Property StartDescriptorReady : Boolean Read GetStartDescriptorReady;
     // Default console input
     Property PredefinedConsoleInput : TStrings Read FPredefinedConsoleInput Write SetPredefinedConsoleInput;
-
+    // Is it a library ?
+    Property IsLibrary : Boolean Read GetIsLibrary;
+    // Is it a program ?
+    Property IsProgram : Boolean Read GetIsProgram;
     // Name of function to run. If empty, the FPC default _start is used.
     Property RunEntryFunction : String Read FRunEntryFunction Write FRunEntryFunction;
     // Called after webassembly start was run. Not called if webassembly was not run.
@@ -620,6 +628,16 @@ function TWASIHost.GetStartDescriptorReady: Boolean;
 begin
   With FPreparedStartDescriptor do
     Result:=Assigned(Memory) and Assigned(Module);
+end;
+
+function TWASIHost.GetIsLibrary: Boolean;
+begin
+  Result:=Assigned(FExported.functions['_initialize']);
+end;
+
+function TWASIHost.GetIsProgram: Boolean;
+begin
+  Result:=Assigned(FExported.functions['_start']);
 end;
 
 procedure TWASIHost.SetUseSharedMemory(AValue: Boolean);
@@ -707,6 +725,21 @@ begin
   WriteOutput(aOutput);
 end;
 
+function ValueToMessage(Res : JSValue) : string;
+
+begin
+  if isObject(Res) then
+    begin
+    Result:=TObject(Res).ClassName;
+    if TObject(Res) is Exception then
+      Result:=Result+': '+Exception(Res).Message
+    end;
+  if (JsTypeOf(Res)='object') and (TJSObject(Res).hasOwnProperty('message')) then
+    Result:=String(TJSObject(Res)['message'])
+  else
+    Result:=TJSJSON.Stringify(Res);
+end;
+
 function TWASIHost.CreateWebAssembly(aPath: string; aImportObject: TJSObject
   ): TJSPromise;
 
@@ -718,8 +751,12 @@ function TWASIHost.CreateWebAssembly(aPath: string; aImportObject: TJSObject
 
   Function InstantiateFail(Res : JSValue) : JSValue;
 
+  var
+    S : String;
+
   begin
     Result:=False;
+    console.Log('Instantiating of WebAssembly from '+aPath+' failed '+ValueToMessage(Res));
     DoInstantiateFail(res);
   end;
 
@@ -739,6 +776,7 @@ function TWASIHost.CreateWebAssembly(aPath: string; aImportObject: TJSObject
   function DoFail(res : jsValue) : JSValue;
   begin
     Result:=False;
+    console.Log('Loading of WebAssembly from '+aPath+' failed '+ValueToMessage(Res));
     DoLoadFail(res);
   end;
 
@@ -802,7 +840,7 @@ begin
   Result:=RunWebAssemblyInstance(aBeforeStart,aAfterStart,Nil);
 end;
 
-procedure TWASIHost.StartWebAssembly(aPath: string; DoRun: Boolean; aBeforeStart: TBeforeStartCallback; aAfterStart: TAfterStartCallback);
+function TWASIHost.StartWebAssembly(aPath: string; DoRun: Boolean; aBeforeStart: TBeforeStartCallback; aAfterStart: TAfterStartCallback) : TJSPromise;
 
 Var
   WASD : TWebAssemblyStartDescriptor;
@@ -813,7 +851,6 @@ Var
     InstResult : TJSInstantiateResult absolute aValue;
 
   begin
-    Result:=True;
     if not (jsTypeOf(aValue)='object') then
       Raise EWasiError.Create('Did not get a instantiated webassembly');
     WASD.Instance:=InstResult.Instance;
@@ -822,13 +859,17 @@ Var
     WASD.CallRun:=Procedure(aExports : TWASIExports)
       begin
       if FRunEntryFunction='' then
-        aExports.Start
+        if Assigned(aExports['_initialize']) then
+          aExports.initialize
+        else
+          aExports.Start
       else
         TProcedure(aExports[RunEntryFunction])();
       end;
     PrepareWebAssemblyInstance(WASD);
     if DoRun then
       RunWebAssemblyInstance(aBeforeStart,aAfterStart,Nil);
+    Result:=TJSPromise.resolve(WASD);
   end;
 
   function DoFail(aValue: JSValue): JSValue;
@@ -844,7 +885,7 @@ begin
   // Clear current descriptor.
   FPreparedStartDescriptor:=Default(TWebAssemblyStartDescriptor);
   WASD:=InitStartDescriptor(GetMemory,GetTable,Nil);
-  CreateWebAssembly(aPath,WASD.Imports)._then(@initEnv,@DoFail).catch(@DoFail);
+  Result:=CreateWebAssembly(aPath,WASD.Imports)._then(@initEnv,@DoFail).catch(@DoFail);
 end;
 
 procedure TWASIHost.RunPreparedDescriptor;

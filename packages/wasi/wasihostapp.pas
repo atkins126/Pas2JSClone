@@ -5,7 +5,7 @@ unit wasihostapp;
 interface
 
 uses
-  Classes, SysUtils, browserapp,  webassembly, wasienv;
+  Classes, SysUtils, browserapp, js, webassembly, wasienv;
 
 Type
 
@@ -41,7 +41,7 @@ Type
     // Load and start webassembly. If DoRun is true, then Webassembly entry point is called.
     // If aBeforeStart is specified, then it is called prior to calling run, and can disable running.
     // If aAfterStart is specified, then it is called after calling run. It is not called is running was disabled.
-    Procedure StartWebAssembly(aPath: string; DoRun : Boolean = True;  aBeforeStart : TBeforeStartCallback = Nil; aAfterStart : TAfterStartCallback = Nil);
+    function StartWebAssembly(aPath: string; DoRun : Boolean = True;  aBeforeStart : TBeforeStartCallback = Nil; aAfterStart : TAfterStartCallback = Nil) : TJSPromise;
     // Initial memory descriptor
     Property MemoryDescriptor : TJSWebAssemblyMemoryDescriptor Read GetMemoryDescriptor Write SetMemoryDescriptor;
     // Import/export table descriptor
@@ -179,11 +179,11 @@ begin
   inherited Destroy;
 end;
 
-procedure TBrowserWASIHostApplication.StartWebAssembly(aPath: string; DoRun: Boolean;
-  aBeforeStart: TBeforeStartCallback = nil; aAfterStart: TAfterStartCallback = nil);
+function TBrowserWASIHostApplication.StartWebAssembly(aPath: string; DoRun: Boolean;
+  aBeforeStart: TBeforeStartCallback = nil; aAfterStart: TAfterStartCallback = nil) : TJSPromise;
 
 begin
-  FHost.StartWebAssembly(aPath,DoRun,aBeforeStart,aAfterStart);
+  Result:=FHost.StartWebAssembly(aPath,DoRun,aBeforeStart,aAfterStart);
 end;
 
 end.
