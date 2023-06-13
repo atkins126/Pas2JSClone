@@ -83,6 +83,7 @@ Type
   TDatahandler = reference to procedure(Data : JSValue);
   TVoidHandler = reference to procedure;
   TElementHandler = reference to procedure(el : TJSHTMLElement);
+  TRowDoubleClickHandler = reference to procedure(aRow : TJSOBject; El : TJSHTMLElement; aField : String);
 
   TBootstrapTableOptions = class external name 'Object' (TJSObject)
     ajax : TAjaxHandler;
@@ -191,7 +192,7 @@ Type
     onPostBody : TDataHandler;
     onPostFooter : TElementhandler;
     onPostHeader : TVoidhandler;
-
+    onDblClickRow : TRowDoubleClickHandler;
   end;
 
   { TJSBootstrapTable }
