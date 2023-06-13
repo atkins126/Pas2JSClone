@@ -104,6 +104,7 @@ Type
 
   THTMLNotifyEvent = Procedure (Sender : TObject; Event : TJSEvent) of object;
 
+
   TEventDispatch = Record
     MsgStr : String;
     HTMLEvent : TJSEvent;
@@ -305,6 +306,7 @@ Type
     FAfterUnRenderHTML: TNotifyEvent;
     FBeforeRenderHTML: TNotifyEvent;
     FBeforeUnRenderHTML: TNotifyEvent;
+    FOnElementBound: TNotifyEvent;
     FParent : TCustomWebWidget;
     FMyHook : TJSRawEventHandler;
     // Set by setting ParentID or Parent
@@ -509,6 +511,8 @@ Type
     Property Visible : Boolean Read GetVisible Write SetVisible;
     // Is the ElementID Set
     Property FixedElementID : Boolean Read GetFixedElementID;
+    // When the element is bound
+    Property OnElementBound : TNotifyEvent Read FOnElementBound Write FOnElementBound;
   // This protected section can be published in descendents
   Protected
     // Parent or Element ID: Will be used when determining the HTML element when rendering.
@@ -2216,6 +2220,8 @@ begin
     ApplyData;
     RefreshReferences; // After data, so data can be used in selectors
     end;
+  if Assigned(FOnElementBound) then
+    FOnElementBound(Self);
 end;
 
 procedure TCustomWebWidget.InvalidateParentElement;
@@ -2909,10 +2915,12 @@ end;
 procedure TCustomWebWidget.RefreshReferences;
 begin
   if Assigned(FReferences) then
+    begin
     if Assigned(Element) then
       References.RefreshFromDom(GetReferenceElement)
     else
-      References.FRefs:=Nil;
+      References.FRefs:=Nil
+    end;
 end;
 
 class function TCustomWebWidget.GenerateID: String;
