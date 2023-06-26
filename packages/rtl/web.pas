@@ -1767,6 +1767,7 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     Procedure reset;
     function reportValidity : Boolean;
     function checkValidity : Boolean;
+    procedure requestSubmit;
     procedure submit;
     method : string;
     target : string;
