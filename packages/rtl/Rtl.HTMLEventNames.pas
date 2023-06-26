@@ -141,7 +141,7 @@ Const
     sEventPlay ,
     SEventPointerCancel ,
     SEventPointerDown ,
-    SEventPointerEnter ,
+    SEventPointerEnter , // 50
     SEventPointerLeave ,
     SEventPointerMove ,
     SEventPointerOut ,
@@ -151,7 +151,7 @@ Const
     sEventResize ,
     sEventScroll ,
     sEventSelect ,
-    sEventSubmit ,
+    sEventSubmit , // 60
     sEventTouchStart ,
     SEventTransitionCancel ,
     SEventTransitionEnd ,
