@@ -216,6 +216,8 @@ type
   public
     function GetParameters: TRttiParameterArray;
     function Invoke(const Instance: TValue; const Args: array of TValue): TValue;
+    function Invoke(const Instance: TObject; const Args: array of TValue): TValue;
+    function Invoke(const aClass: TClass; const Args: array of TValue): TValue;
 
     property IsAsyncCall: Boolean read GetIsAsyncCall;
     property IsClassMethod: Boolean read GetIsClassMethod;
@@ -1892,6 +1894,26 @@ begin
     AArgs[A] := Args[A].AsJSValue;
 
   Result.SetData(TJSFunction(TJSObject(Instance.AsJSValue)[Name]).apply(TJSObject(Instance.AsJSValue), AArgs));
+end;
+
+function TRttiMethod.Invoke(const Instance: TObject; const Args: array of TValue): TValue;
+
+var
+  v : TValue;
+
+begin
+  TValue.make(Instance,Instance.ClassInfo,v);
+  Result:=Invoke(v,Args);
+end;
+
+function TRttiMethod.Invoke(const aClass: TClass; const Args: array of TValue
+  ): TValue;
+var
+  v : TValue;
+
+begin
+  TValue.make(aClass,aClass.ClassInfo,v);
+  Result:=Invoke(V,Args);
 end;
 
 { TRttiProperty }
