@@ -10,16 +10,30 @@ type
 
   TCustomDBBootstrapTableWidget = Class;
 
-  TColumnRenderMode = (crmText, crmNumeric, crmDateTime, crmTransformedValue, crmCheckBox, crmButton, crmCustom);
+  TColumnRenderMode = (crmText, crmNumeric, crmDateTime, crmTransformedValue, crmCheckBox, crmButton, crmCustom, crmSelect);
   TColumnButtonType = (cbtInfo, cbtEdit, cbtDelete, cbtCustom);
 
   TDataTablesFieldMap = Class(TObject)
   Private
-    FRow: TJSArray;
     FFieldDefs: TFieldDefs;
   Public
-    Function GetValueByName(S: String): JSValue;
+    Function GetValueByName(S: String): JSValue; virtual; abstract;
   end;
+
+  TArrayDataTablesFieldMap = Class(TDataTablesFieldMap)
+  Private
+    FRow: TJSArray;
+  Public
+    Function GetValueByName(S: String): JSValue; override;
+  end;
+
+  TObjectDataTablesFieldMap = Class(TDataTablesFieldMap)
+  Private
+    FRow: TJSObject;
+  Public
+    Function GetValueByName(S: String): JSValue; override;
+  end;
+
 
   TOnCustomValueEvent = procedure(Sender: TObject; Fields: TDataTablesFieldMap; out aOutput: String) of object;
   TOnFormatEvent = procedure(Sender: TObject; Data: JSValue; row: TJSObject; RowIndex : Integer; Field : string; out aOutput: JSValue);
@@ -149,6 +163,7 @@ type
 
   TOnCreatedRowEvent = reference to function(row: TJSNode; Data: TJSArray; dataIndex: Integer): JSValue;
   TRowSelectEvent = Procedure(Sender : TObject; aRow : TJSObject; aField : String) of object;
+  TCheckRowEvent = Procedure(Sender : TObject; aRow : TJSObject) of object;
 
   { TTableDataLink }
 
@@ -188,6 +203,7 @@ type
   TCustomDBBootstrapTableWidget = class(TWebWidget)
   private
     FAfterBodyDraw: TNotifyEvent;
+    FOnCheckRow: TCheckRowEvent;
     FOnDoubleClickRow: TRowSelectEvent;
     FStylingClasses: TStylingClasses;
     FLink : TTableDataLink;
@@ -202,8 +218,9 @@ type
     FTableViewOptions: TBSTableViewOptions;
     FShowSearch: Boolean;
     FReadOnly: Boolean;
-    procedure DoDoubleClickRow(aRow: TJSOBject; El: TJSHTMLElement;
-      aField: String);
+    FTableCreated : Boolean;
+    procedure DoDoubleClickRow(aRow: TJSOBject; El: TJSHTMLElement; aField: String);
+    procedure DoCheckRow(aRow: TJSOBject; El: TJSHTMLElement);
     function GetData: TJSArray;
     function GetDataFromDataset: TJSArray;
     function GetDataset: TDataset;
@@ -228,6 +245,7 @@ type
     Procedure ActiveChanged; virtual;
     function HTMLTag: String; override;
     procedure DoAfterBodyDraw(aData : JSValue);
+    procedure ApplyOtherOptions(aOptions: TBootstrapTableOptions);
     procedure ApplyPaginationOptions(aOptions: TBootstrapTableOptions); virtual;
     procedure ApplySearchOptions(aOptions: TBootstrapTableOptions); virtual;
     procedure ApplyViewOptions(aOptions: TBootstrapTableOptions); virtual;
@@ -299,6 +317,8 @@ type
     Property AfterBodyDraw : TNotifyEvent Read FAfterBodyDraw Write FAfterBodyDraw;
     // Called when the user double-clicks a row
     Property OnDoubleClickRow : TRowSelectEvent Read FOnDoubleClickRow Write FOnDoubleClickRow;
+    // Called when the user selects a record
+    Property OnCheckRow : TCheckRowEvent Read FOnCheckRow Write FOnCheckRow;
    end;
 
   TDBBootstrapTableWidget = class(TCustomDBBootstrapTableWidget)
@@ -314,6 +334,7 @@ type
     property DisplayReadOnly;
     Property AfterBodyDraw;
     Property OnDoubleClickRow;
+    Property OnCheckRow;
   end;
 
 Const
@@ -502,7 +523,12 @@ Var
 
 begin
   if Datasource.Dataset is TBaseJSONDataset then
-    Result:=TRowsDataset(Datasource.Dataset).Rows
+    begin
+    Result:=TJSArray(TRowsDataset(Datasource.Dataset).Rows).filter(function (el : jsvalue; Index : NativeInt; aArr : TJSArray) : boolean
+      begin
+        Result:=isDefined(el);
+      end);
+    end
   else
     With Datasource.Dataset do
       begin
@@ -557,9 +583,15 @@ end;
 procedure TCustomDBBootstrapTableWidget.DoDoubleClickRow(aRow: TJSOBject;
   El: TJSHTMLElement; aField: String);
 begin
-  Writeln('In double click of row');
   if Assigned(FOnDoubleClickRow) then
     FOnDoubleClickRow(Self,aRow,aField);
+end;
+
+procedure TCustomDBBootstrapTableWidget.DoCheckRow(aRow: TJSOBject;
+  El: TJSHTMLElement);
+begin
+  if Assigned(FOnCheckRow) then
+    FOnCheckRow(Self,aRow);
 end;
 
 function TCustomDBBootstrapTableWidget.GetDatasource : TDataSource;
@@ -628,7 +660,7 @@ end;
 function TCustomDBBootstrapTableWidget.MakeTransformValueCol(aCol: TBootstrapTableColumn; aTableCol: TBSTableColumn): TBootstrapTableColumn;
 
 var
-   F:TDataTablesFieldMap;
+   F : TObjectDataTablesFieldMap;
 
   function renderCallBack(Data: JSValue; row: TJSObject; RowIndex : Integer; Field : string): JSValue;
 
@@ -637,6 +669,7 @@ var
 
   begin
     Res:='';
+    F.FRow:=Row;
     if Assigned(aTableCol.OnTransformValue) then
       aTableCol.OnTransformValue(aTableCol, F, Res);
     Result:=Res;
@@ -644,7 +677,7 @@ var
 
 begin
   Result:=aCol;
-  F:=TDataTablesFieldMap.Create;
+  F:=TObjectDataTablesFieldMap.Create;
   F.FFieldDefs:=Datasource.DataSet.FieldDefs;
   Result.Formatter := @renderCallBack;
 end;
@@ -911,6 +944,8 @@ begin
         MakeDateTimeRenderCol(aColumn, aCol);
       crmNumeric:
         MakeNumericRenderCol(aColumn, aCol);
+      crmSelect:
+        aColumn.checkbox:=True;
     end;
     Result[I] := aColumn;
   end;
@@ -968,6 +1003,21 @@ begin
     end;
 end;
 
+procedure TCustomDBBootstrapTableWidget.ApplyOtherOptions(
+  aOptions: TBootstrapTableOptions);
+
+begin
+  aOptions.clickToSelect:=(btoClickToSelect in Options);
+  aOptions.escape:=(btoEscapeHTML in Options);
+  aOptions.singleSelect:=(btoSingleSelect in Options);
+  aOptions.resizable:=(btoResizable in Options);
+  aOptions.multipleSelectRow:=(btoMultipleSelectRow in Options);
+  aOptions.rememberOrder:=(btoRememberOrder in Options);
+  aOptions.resizable:=(btoResizable in Options);
+  aOptions.detailViewByClick:=(btoDetailViewByClick in Options);
+end;
+
+
 procedure TCustomDBBootstrapTableWidget.ConfigureOptions(
   aOptions: TBootstrapTableOptions);
 Var
@@ -978,9 +1028,11 @@ begin
   ApplySearchOptions(aOptions);
   ApplyPaginationOptions(aOptions);
   ApplyViewOptions(aOptions);
+  ApplyOtherOptions(aOptions);
   aOptions.Data := Data;
   aOptions.onPostBody:=@DoAfterBodyDraw;
   aOptions.onDblClickRow:=@DoDoubleClickRow;
+  aOptions.onCheck:=@DoCheckRow;
 end;
 
 
@@ -1101,8 +1153,9 @@ end;
 
 procedure TCustomDBBootstrapTableWidget.RefreshData;
 begin
-  Data:=Nil;
-  Refresh;
+  FData:=Nil; // Force re-fetch at next occasion
+  if IsRendered then
+    JQuery('#'+ElementID).BootstrapTable('load',GetData)
 end;
 
 
@@ -1110,6 +1163,7 @@ procedure TCustomDBBootstrapTableWidget.UnRender;
 
 begin
   JQuery('#'+ElementID).BootstrapTable('destroy');
+  FTableCreated:=False;
 end;
 
 procedure TCustomDBBootstrapTableWidget.ApplyWidgetSettings(aElement: TJSHTMLElement);
@@ -1120,8 +1174,11 @@ var
 begin
   aOptions:=TBootstrapTableOptions.New;
   ConfigureOptions(aOptions);
-  JQuery(aElement).BootstrapTable(aOptions);
-  // JQuery('#'+ElementID).BootstrapTable('refresh');
+  if FTableCreated then
+    JQuery('#'+aElement.ID).BootstrapTable('refreshOptions',aOptions)
+  else
+    JQuery(aElement).BootstrapTable(aOptions);
+  FTableCreated:=True;
 end;
 
 function TCustomDBBootstrapTableWidget.IsOptionsStored: Boolean;
@@ -1149,17 +1206,29 @@ begin
   Result:=ViewOptions<>DefaultViewOptions;
 end;
 
-{ TDataTablesFieldMap }
+{ TArrayDataTablesFieldMap }
 
-function TDataTablesFieldMap.GetValueByName(S: String): JSValue;
+function TArrayDataTablesFieldMap.GetValueByName(S: String): JSValue;
 Var
   fld: TFieldDef;
 begin
   fld:=FFieldDefs.Find(S);
-  if Assigned(fld) then
+  if Assigned(fld) and assigned(FRow) then
     Result:=FRow[fld.Index]
   else
     Result:=Null;
 end;
+
+function TObjectDataTablesFieldMap.GetValueByName(S: String): JSValue;
+Var
+  fld: TFieldDef;
+begin
+  fld:=FFieldDefs.Find(S);
+  if Assigned(fld) and assigned(FRow) then
+    Result:=FRow[fld.name]
+  else
+    Result:=Null;
+end;
+
 
 end.
