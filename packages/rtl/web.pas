@@ -1520,6 +1520,7 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     procedure focus;
     Function getComputedStyle(aElement : TJSElement) : TJSCSSStyleDeclaration; overload;
     Function getComputedStyle(aElement,aPseudoElement : TJSElement) : TJSCSSStyleDeclaration; overload;
+    function getSelection : TJSSelection;
     function matchMedia(aQuery : String) : TJSMediaQueryList;
     procedure moveBy(x,y : NativeInt);
     procedure moveTo(x,y : NativeInt);
@@ -2993,6 +2994,7 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     procedure disconnect;
     function takeRecords: TJSMutationRecordArray;
   end;
+
 
   { --------------------------------------------------------------------
     TJSWebSocket
