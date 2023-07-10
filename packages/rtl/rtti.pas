@@ -269,6 +269,7 @@ type
     //FMethods: specialize TArray<TRttiMethod>;
     function GetAsInstance: TRttiInstanceType;
     function GetAsInstanceExternal: TRttiInstanceExternalType;
+    function GetDeclaringUnitName: string;
     function GetHandle: TTypeInfo;
     function GetQualifiedName: String;
   protected
@@ -310,6 +311,7 @@ type
     property AsInstanceExternal: TRttiInstanceExternalType read GetAsInstanceExternal;
     property TypeKind: TTypeKind read GetTypeKind;
     //property TypeSize: integer read GetTypeSize;
+    property DeclaringUnitName: string read GetDeclaringUnitName;
     property QualifiedName: String read GetQualifiedName;
   end;
 
@@ -2088,9 +2090,14 @@ begin
   Result := nil;
 end;
 
+function TRttiType.GetDeclaringUnitName: String;
+begin
+  Result := Handle.Module.Name;
+end;
+
 function TRttiType.GetQualifiedName: String;
 begin
-  Result := Format('%s.%s', [Handle.Module.Name, Name]);
+  Result := Format('%s.%s', [DeclaringUnitName, Name]);
 end;
 
 { TVirtualInterface }
