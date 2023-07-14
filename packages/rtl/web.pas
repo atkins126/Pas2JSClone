@@ -2573,8 +2573,8 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
   Public
     constructor New(x,y : Cardinal); overload;
     { getContextAs2DContext reintroduced here to return the subclassed context }
-    Function getContextAs2DContext(contextType : string; contextAttributes : TJSObject) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext';
-    Function getContextAs2DContext(contextType : string) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext';
+    Function getContextAs2DContext(contextType : string; contextAttributes : TJSObject) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext'; reintroduce;
+    Function getContextAs2DContext(contextType : string) : TJSOffscreenCanvasRenderingContext2D; external name 'getContext'; reintroduce;
     function transferToImageBitmap: TJSImageBitmap;
   end;
   
