@@ -29,7 +29,7 @@ Type
    TForeachHTMLElementDataEx = {$ifdef pas2js}reference to {$endif} procedure (aElement : TJSHTMLElement; aData : TObject);
    TForeachHTMLElementData = {$ifdef pas2js}reference to {$endif} procedure (aElement : TJSHTMLElement);
 
-   THTMLCustomElementAction = class(TComponent,IHTMLClient)
+   THTMLCustomElementAction = class(TComponent)
    private
      FActionList: THTMLCustomElementActionList;
      FCSSSelector: String;
@@ -62,8 +62,6 @@ Type
    Public
      Destructor Destroy; override;
      Class Function GetElementValue(aElement : TJSHTMLElement) : String; virtual;
-     procedure HTMLLoaded;
-     procedure HTMLRendered;
      Class Procedure SetElementValue(aElement : TJSHTMLElement; const aValue : String; asHTML : Boolean = false); virtual;
      function GetParentComponent: TComponent; override;
      function HasParent: Boolean; override;
@@ -117,8 +115,10 @@ Type
 
    { THTMLCustomElementActionList }
 
-   THTMLCustomElementActionList = class(TComponent)
+   THTMLCustomElementActionList = class(TComponent,IHTMLClient)
    private
+     FAfterBind: TNotifyEVent;
+     FBeforeBind: TNotifyEVent;
      FList : TFPList;
      FOnExecute: THTMLGLobalNotifyEvent;
      function GetAction(aIndex: Integer): THTMLCustomElementAction;
@@ -131,6 +131,10 @@ Type
      Procedure AddAction(aAction: THTMLCustomElementAction); virtual;
      Procedure RemoveAction(aAction: THTMLCustomElementAction); virtual;
      Function ExecuteAction(aAction: THTMLCustomElementAction; aEvent : TJSEvent) : Boolean; virtual;
+     procedure DoBeforeBind; virtual;
+     procedure DoAfterBind; virtual;
+     procedure HTMLLoaded; virtual;
+     procedure HTMLRendered; virtual;
    Public
      Constructor Create(aOwner : TComponent); override;
      Destructor Destroy; override;
@@ -145,11 +149,15 @@ Type
      Property ActionCount : Integer Read GetActionsCount;
    Protected
      Property OnExecute : THTMLGLobalNotifyEvent Read FOnExecute Write FOnExecute;
+     Property BeforeBind : TNotifyEVent Read FBeforeBind Write FBeforeBind;
+     Property AfterBind : TNotifyEVent Read FAfterBind Write FAfterBind;
    end;
 
    THTMLElementActionList = Class(THTMLCustomElementActionList)
    Published
      Property OnExecute;
+     Property BeforeBind;
+     Property AfterBind;
    end;
 
 
@@ -229,6 +237,18 @@ begin
     FOnExecute(aAction,aEvent,Result);
 end;
 
+procedure THTMLCustomElementActionList.DoBeforeBind;
+begin
+  if assigned(FBeforeBind) then
+    FBeforeBind(Self);
+end;
+
+procedure THTMLCustomElementActionList.DoAfterBind;
+begin
+  if assigned(FAfterBind) then
+    FAfterBind(Self);
+end;
+
 constructor THTMLCustomElementActionList.Create(aOwner: TComponent);
 begin
   inherited Create(aOwner);
@@ -261,8 +281,10 @@ Var
   I : Integer;
 
 begin
+  DoBeforeBind;
   For I:=0 to ActionCount-1 do
      Actions[I].Bind;
+  DoAfterBind;
 end;
 
 function THTMLCustomElementActionList.IndexOfElementID(aID: String;
@@ -409,12 +431,12 @@ begin
   Result:=aElement.InputValue;
 end;
 
-procedure THTMLCustomElementAction.HTMLLoaded;
+procedure THTMLCustomElementActionList.HTMLLoaded;
 begin
   // Do nothing
 end;
 
-procedure THTMLCustomElementAction.HTMLRendered;
+procedure THTMLCustomElementActionList.HTMLRendered;
 begin
   Bind;
 end;
