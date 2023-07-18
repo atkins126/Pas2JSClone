@@ -34,7 +34,7 @@ type
     Function GetValueByName(S: String): JSValue; override;
   end;
 
-
+  TJSFilterFunction = reference to function(Row,Filters : TJSObject): Boolean;
   TOnCustomValueEvent = procedure(Sender: TObject; Fields: TDataTablesFieldMap; out aOutput: String) of object;
   TOnFormatEvent = procedure(Sender: TObject; Data: JSValue; row: TJSObject; RowIndex : Integer; Field : string; out aOutput: JSValue);
   TSortOrderMethod = function(Sender: TObject; Data: JSValue): Integer;
@@ -291,7 +291,10 @@ type
     procedure ShowLoading;
     // Refresh data and re-render
     Procedure RefreshData;
-    // Data to be rendered
+    // Filter rows
+    procedure Filter(aObj : TJSObject);
+    procedure Filter(aFilter : TJSFilterFunction);
+      // Data to be rendered
     property Data: TJSArray read GetData write SetData;
     // Below protected section can be published
   protected
@@ -1015,6 +1018,7 @@ begin
   aOptions.rememberOrder:=(btoRememberOrder in Options);
   aOptions.resizable:=(btoResizable in Options);
   aOptions.detailViewByClick:=(btoDetailViewByClick in Options);
+  aOptions.iconsPrefix:='bi';
 end;
 
 
@@ -1033,6 +1037,7 @@ begin
   aOptions.onPostBody:=@DoAfterBodyDraw;
   aOptions.onDblClickRow:=@DoDoubleClickRow;
   aOptions.onCheck:=@DoCheckRow;
+
 end;
 
 
@@ -1156,6 +1161,16 @@ begin
   FData:=Nil; // Force re-fetch at next occasion
   if IsRendered then
     JQuery('#'+ElementID).BootstrapTable('load',GetData)
+end;
+
+procedure TCustomDBBootstrapTableWidget.Filter(aObj: TJSObject);
+begin
+  JQuery('#'+Element.ID).BootstrapTable('filterBy',aObj)
+end;
+
+procedure TCustomDBBootstrapTableWidget.Filter(aFilter: TJSFilterFunction);
+begin
+  JQuery('#'+Element.ID).BootstrapTable('filterBy',new([]),new(['filterAlgorithm',aFilter]));
 end;
 
 
