@@ -562,8 +562,6 @@ end;
 procedure TToastManager.SetParentID(const Value: String);
 begin
   FParentID := Value;
-  if ParentID<>'' then
-    TBulmaToast.SetDoc(document.getElementById(ParentID));
 end;
 
 
@@ -749,6 +747,8 @@ Var
   S : String;
   Opts : TJSObject;
   aDelay : NativeInt;
+  parEl : TJSElement;
+
 Begin
   S:=ContextualNames[Contextual];
   if S<>'' then
@@ -760,8 +760,13 @@ Begin
   aDelay:=FHideDelay;
   if Not AutoHide then // we let it display for 1 day
     aDelay:=24*3600*1000;
+  if (ParentID<>'') then
+    parEl:=document.getElementById(ParentID)
+  else
+    parEl:=document.body;
   Opts:=New([
-    'message', aElement,
+      'appendTo', parEl,
+      'message', aElement,
       'type', S,
       'single', single,
       'animate',FAnimate,
