@@ -153,7 +153,7 @@ type
     function GetVisibility: TMemberVisibility; virtual;
     function LoadCustomAttributes: TCustomAttributeArray; override;
   public
-    constructor Create(AParent: TRttiType; ATypeInfo: TTypeMember);
+    constructor Create(AParent: TRttiType; ATypeInfo: TTypeMember); reintroduce;
 
     property MemberTypeInfo: TTypeMember read GetMemberTypeInfo;
     property Parent: TRttiType read GetParent;
@@ -226,6 +226,7 @@ type
     property IsExternal: Boolean read GetIsExternal;
     property IsSafeCall: Boolean read GetIsSafeCall;
     property IsStatic: Boolean read GetIsStatic;
+    property IsVarArgs: Boolean read GetIsVarArgs;
     property MethodKind: TMethodKind read GetMethodKind;
     property MethodTypeInfo: TTypeMemberMethod read GetMethodTypeInfo;
     property ReturnType: TRttiType read GetReturnType;
@@ -679,11 +680,6 @@ begin
 end;
 
 class procedure TRttiPoolTypes.ReleaseContext;
-var
-  Key: String;
-
-  RttiObject: TRttiType;
-
 begin
   Dec(Pool.FReferenceCount);
 
@@ -1882,8 +1878,6 @@ function TRttiMethod.Invoke(const Instance: TValue; const Args: array of TValue)
 var
   A: Integer;
 
-  ReturnHandle: PTypeInfo;
-
   AArgs: TJSValueDynArray;
 
 begin
@@ -2137,7 +2131,7 @@ begin
   InterfaceObject['_Release'] := @_Release;
   InterfaceObject['QueryInterface'] := @QueryInterface;
 
-  SelfInterfaceObject := TInterfaceObject(Self);
+  SelfInterfaceObject := TInterfaceObject(TJSObject(Self));
   SelfInterfaceObject.InterfaceMaps := TJSObject.New;
   SelfInterfaceObject.InterfaceMaps[GUIDToString(IInterface)] := InterfaceObject;
   SelfInterfaceObject.InterfaceMaps[FInterfaceType.Guid.ToString] := TJSObject.New;
@@ -2180,8 +2174,6 @@ var
   function GenerateParams: specialize TArray<TValue>;
   var
     A: Integer;
-
-    Return: TValue;
 
     Param: TRttiParameter;
 
