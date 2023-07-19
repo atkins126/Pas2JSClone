@@ -211,7 +211,11 @@ begin
     {$ENDIF}
     P.Targets.AddImplicitUnit('stubcreator',False).ResourceStrings:=True;
     // Determine unit files location
+    {$IF DECLARED(TCompileTarget)}
+    BD:=IncludeTrailingPathDelimiter(P.GetBinOutputDir(Defaults.BuildTarget));
+    {$ELSE} 
     BD:=IncludeTrailingPathDelimiter(P.GetBinOutputDir(Defaults.BuildCPU,Defaults.BuildOS));
+    {$ENDIF}
     TmpCfg:='compiler/utils/pas2js/dist/pas2js.cfg';
     Case Installer.RunMode of
     rmCompile,rmBuild:
