@@ -1199,7 +1199,6 @@ function TDictionary<TKey, TValue>.GetEffectiveKey(Key: TKey): TKey;
 Var
   it : TJSIterator;
   v : TJSIteratorValue;
-  vv : JSValue;
 
 begin
   if Not assigned(FComparer) then
@@ -1242,8 +1241,6 @@ begin
 end;
 
 procedure TDictionary<TKey, TValue>.DoAdd(const Key: TKey; const Value: TValue);
-Var
-  k : Tkey;
 begin
   FMap.&Set(GetEffectiveKey(Key),Value);
   KeyNotify(Key,cnAdded);
