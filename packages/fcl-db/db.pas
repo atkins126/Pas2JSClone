@@ -1036,7 +1036,7 @@ type
   TFilterOption = (foCaseInsensitive, foNoPartialCompare);
   TFilterOptions = set of TFilterOption;
 
-  TLoadOption = (loNoOpen,loNoEvents,loAtEOF,loCancelPending);
+  TLoadOption = (loNoOpen,loNoEvents,loAtEOF,loCancelPending,loReload);
   TLoadOptions = Set of TLoadOption;
   TDatasetLoadEvent = procedure(DataSet: TDataSet; Data : JSValue) of object;
   TDatasetLoadFailEvent = procedure(DataSet: TDataSet; ID : Integer; Const ErrorMsg : String) of object;
@@ -4631,7 +4631,12 @@ begin
   Request:=DataProxy.GetDataRequest(aOptions,@HandleRequestResponse,aAfterLoad);
   Request.FDataset:=Self;
   If Active then
-    Request.FBookmark:=GetBookmark;
+    begin
+    if loReload in aOPtions then
+      Close
+    else
+      Request.FBookmark:=GetBookmark;
+    end;
   Inc(FDataRequestID);
   Request.FRequestID:=FDataRequestID;
   if DataProxy.DoGetData(Request) then
