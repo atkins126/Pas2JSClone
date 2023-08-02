@@ -55,6 +55,7 @@ type
   Public
     Constructor Create(aWidget: TCustomDBBootstrapTableWidget); virtual;
     Procedure Assign(Source : TPersistent); override;
+    function GetOwner: TPersistent; override;
   Published
     Property CheckBoxClass : String Read FCheckBoxClass Write FCheckBoxClass;
     Property ButtonClass : String Read FButtonClass Write FButtonClass;
@@ -69,7 +70,6 @@ type
 
   TBSTableColumn = class(TCollectionItem)
   private
-    FElementID: string;
     FFieldName: string;
     FFormatting: string;
     FOnButtonClick: TBSColumnClickEvent;
@@ -410,6 +410,11 @@ begin
     end
   else
     inherited Assign(Source);
+end;
+
+function TStylingClasses.GetOwner: TPersistent;
+begin
+  Result:=FWidget;
 end;
 
 
@@ -753,7 +758,7 @@ var
       cbtInfo:
         sIcon := StylingClasses.InfoClass;
       cbtEdit:
-        sIcon := IfThen(DisplayReadOnly,StylingClasses.EditClass,StylingClasses.ReadonlyEditClass);
+        sIcon := IfThen(DisplayReadOnly,StylingClasses.ReadonlyEditClass,StylingClasses.EditClass);
       cbtDelete:
         sIcon := StylingClasses.DeleteClass;
       cbtCustom:
