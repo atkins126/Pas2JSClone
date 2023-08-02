@@ -171,7 +171,7 @@ begin
     P.Targets.AddProgram('makestub.pp');
     T:=P.Targets.AddLibrary('pas2jslib.pp');
     if Defaults.OS=Linux then
-      T.Options.Add('-olibpas2js.so');
+      T.SetExeName('libpas2js.so');
     {$ENDIF}
     P.Targets.AddImplicitUnit('fpjson',False).ResourceStrings:=True;
     P.Targets.AddImplicitUnit('fppas2js',False).ResourceStrings:=True;
