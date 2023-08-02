@@ -437,10 +437,14 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
   TJSEventHelper = class helper for TJSEvent
   private
     function GetCurrentTargetElement: TJSElement;
+    function GetCurrentTargetHTMLElement: TJSHTMLElement;
     function GetTargetElement: TJSElement;
+    function GetTargetHTMLElement: TJSHTMLElement;
   Public
     property currentTargetElement : TJSElement Read GetCurrentTargetElement;
+    property currentTargetHTMLElement : TJSHTMLElement Read GetCurrentTargetHTMLElement;
     property targetElement : TJSElement Read GetTargetElement;
+    property targetHTMLElement : TJSHTmlElement Read GetTargetHTMLElement;
   end;
 
 
@@ -3361,9 +3365,19 @@ begin
   Result:=TJSElement(CurrentTarget);
 end;
 
+function TJSEventHelper.GetCurrentTargetHTMLElement: TJSHTMLElement;
+begin
+  Result:=TJSHTMLElement(CurrentTarget);
+end;
+
 function TJSEventHelper.GetTargetElement: TJSElement;
 begin
   Result:=TJSElement(Target);
+end;
+
+function TJSEventHelper.GetTargetHTMLElement: TJSHTMLElement;
+begin
+  Result:=TJSHTMLElement(Target);
 end;
 
 end.
