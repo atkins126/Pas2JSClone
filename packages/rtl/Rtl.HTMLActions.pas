@@ -43,10 +43,14 @@ Type
      FStopPropagation: Boolean;
      FBeforeBind : TNotifyEvent;
      FAfterBind : TNotifyEvent;
+     function GetChecked: Boolean;
+     function GetDisabled: Boolean;
      function GetIndex: Integer;
      procedure SetActionList(AValue: THTMLCustomElementActionList);
+     procedure SetChecked(AValue: Boolean);
      procedure SetCSSSelector(AValue: String);
      procedure SetCustomEvents(AValue: String);
+     procedure SetDisabled(AValue: Boolean);
      procedure SetElementID(AValue: String);
      procedure SetIndex(AValue: Integer);
    Protected
@@ -61,8 +65,12 @@ Type
 
    Public
      Destructor Destroy; override;
+     Class Function GetElementChecked(aElement : TJSHTMLElement) : boolean; virtual;
+     Class Function GetElementDisabled(aElement : TJSHTMLElement) : boolean; virtual;
      Class Function GetElementValue(aElement : TJSHTMLElement) : String; virtual;
      Class Procedure SetElementValue(aElement : TJSHTMLElement; const aValue : String; asHTML : Boolean = false); virtual;
+     Class Procedure SetElementChecked(aElement : TJSHTMLElement; const aValue : Boolean); virtual;
+     Class Procedure SetElementDisabled(aElement : TJSHTMLElement; const aValue : Boolean); virtual;
      function GetParentComponent: TComponent; override;
      function HasParent: Boolean; override;
      Procedure Bind;
@@ -82,6 +90,8 @@ Type
      // When reading, only the first value is returned in case of multiple elements.
      // When writing, the value is set on all elements.
      Property Value : String Read GetValue Write SetValue;
+     property checked : Boolean Read GetChecked write SetChecked;
+     property Disabled : Boolean Read GetDisabled Write SetDisabled;
    Public
      // These can be published in descendents
      Property Events : THTMLEvents Read FEvents Write FEvents;
@@ -380,12 +390,35 @@ begin
     FActionList.AddAction(Self);
 end;
 
+procedure THTMLCustomElementAction.SetChecked(AValue: Boolean);
+
+  procedure DoSetChecked(aElement: TJSHTMLElement);
+  begin
+    SetElementChecked(aElement,aValue);
+  end;
+
+begin
+  ForEach(@DoSetChecked);
+end;
+
 function THTMLCustomElementAction.GetIndex: Integer;
 begin
   if Assigned(FActionList) then
     Result:=FActionList.GetActionIndex(Self)
   else
     Result:=-1;
+end;
+
+function THTMLCustomElementAction.GetChecked: Boolean;
+begin
+  if (Length(FElements)>0) and Assigned (FElements[0]) then
+    Result:=GetElementChecked(FElements[0]);
+end;
+
+function THTMLCustomElementAction.GetDisabled: Boolean;
+begin
+  if (Length(FElements)>0) and Assigned (FElements[0]) then
+    Result:=GetElementDisabled(FElements[0]);
 end;
 
 function THTMLCustomElementAction.GetValue: String;
@@ -425,6 +458,18 @@ begin
   Inherited;
 end;
 
+class function THTMLCustomElementAction.GetElementChecked(
+  aElement: TJSHTMLElement): boolean;
+begin
+  Result:=aElement.IsChecked;
+end;
+
+class function THTMLCustomElementAction.GetElementDisabled(
+  aElement: TJSHTMLElement): boolean;
+begin
+  Result:=aElement.IsDisabled;
+end;
+
 class function THTMLCustomElementAction.GetElementValue(aElement: TJSHTMLElement
   ): String;
 begin
@@ -455,6 +500,18 @@ begin
     aElement.InputValue:=aValue;
 end;
 
+class procedure THTMLCustomElementAction.SetElementChecked(
+  aElement: TJSHTMLElement; const aValue: Boolean);
+begin
+  aElement.IsChecked:=aValue;
+end;
+
+class procedure THTMLCustomElementAction.SetElementDisabled(
+  aElement: TJSHTMLElement; const aValue: Boolean);
+begin
+  aElement.IsDisabled:=aValue;
+end;
+
 procedure THTMLCustomElementAction.SetCSSSelector(AValue: String);
 begin
   if (FCSSSelector=aValue) then exit;
@@ -469,6 +526,16 @@ begin
   FCustomEvents:=aValue;
   If Not (csDesigning in ComponentState) then
     BindElementEvents;
+end;
+
+procedure THTMLCustomElementAction.SetDisabled(AValue: Boolean);
+  procedure DoSetChecked(aElement: TJSHTMLElement);
+  begin
+    SetElementDisabled(aElement,aValue);
+  end;
+
+begin
+  ForEach(@DoSetChecked);
 end;
 
 procedure THTMLCustomElementAction.SetElementID(AValue: String);

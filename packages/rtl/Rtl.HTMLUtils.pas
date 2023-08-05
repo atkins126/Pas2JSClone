@@ -83,8 +83,12 @@ Type
   private
     Function GetData(aName: String): String;
     function GetInputValue: String;
+    function GetIsChecked: Boolean;
+    function GetIsDisabled: Boolean;
     procedure SetData(Index: String; AValue: String);
     procedure SetInputValue(const aValue: String);
+    procedure SetIsChecked(AValue: Boolean);
+    procedure SetIsDisabled(AValue: Boolean);
   Public
     Function ParentHTMLElement : TJSHTMLElement;
     Function FindParent(aMatch : TJSHTMLElementMatcher) : TJSHTMLElement;
@@ -95,6 +99,8 @@ Type
     procedure AddRemoveClass(Const aAddClass, aRemoveClass: String); overload;
     function HasClass(const aClass: String): Boolean;
     Property InputValue: String Read GetInputValue Write SetInputValue;
+    Property IsChecked : Boolean Read GetIsChecked Write SetIsChecked;
+    Property IsDisabled: Boolean Read GetIsDisabled Write SetIsDisabled;
     Property Data[Index: String]: String Read GetData Write SetData;
   end;
 
@@ -376,6 +382,19 @@ begin
   Result:=GetElementValue(Self)
 end;
 
+function TJSHTMLElementHelper.GetIsChecked: Boolean;
+begin
+  if Self is TJSHTMLInputElement then
+    Result:=TJSHTMLInputElement(Self).Checked
+  else
+    Result:=False;
+end;
+
+function TJSHTMLElementHelper.GetIsDisabled: Boolean;
+begin
+  Result:=Assigned(Self) and (hasOwnProperty('disabled'))
+end;
+
 procedure TJSHTMLElementHelper.SetData(Index: String; AValue: String);
 begin
   Dataset.Map[Index]:=aValue;
@@ -398,6 +417,20 @@ end;
 procedure TJSHTMLElementHelper.SetInputValue(const aValue: String);
 begin
   SetElementValue(Self,aValue)
+end;
+
+procedure TJSHTMLElementHelper.SetIsChecked(AValue: Boolean);
+begin
+  if (Self is TJSHTMLInputElement) then
+    TJSHTMLInputElement(Self).Checked:=aValue;
+end;
+
+procedure TJSHTMLElementHelper.SetIsDisabled(AValue: Boolean);
+begin
+  if aValue then
+    Self.Properties['disabled']:=True
+  else
+    Self.Properties['disabled']:=Undefined;
 end;
 
 function TJSHTMLElementHelper.ParentHTMLElement: TJSHTMLElement;
