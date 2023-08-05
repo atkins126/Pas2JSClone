@@ -1,4 +1,4 @@
 [submodule "compiler"]
 	path = compiler
-	url = ../source
+	url = https://github.com/henriquewerlang/FPCClone.git
 	branch = main
