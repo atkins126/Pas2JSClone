@@ -470,6 +470,19 @@ type
     property ElementType: TRttiType read GetElementType;
   end;
 
+  { TRttiPointerType }
+
+  TRttiPointerType = class(TRttiType)
+  private
+    function GetRefType: TRttiType;
+    function GetRefTypeInfo: TTypeInfoPointer;
+  public
+    constructor Create(AParent: TRttiObject; ATypeInfo: PTypeInfo); override;
+
+    property RefType: TRttiType read GetRefType;
+    property RefTypeInfo: TTypeInfoPointer read GetRefTypeInfo;
+  end;
+
   EInvoke = EJS;
 
   TVirtualInterfaceInvokeEvent = reference to procedure(Method: TRttiMethod; const Args: specialize TArray<TValue>; out Result: TValue);
@@ -623,7 +636,7 @@ var
     TRttiRecordType, // tkRecord
     TRttiInstanceType, // tkClass
     TRttiClassRefType, // tkClassRef
-    TRttiType, // tkPointer
+    TRttiPointerType, // tkPointer
     TRttiType, // tkJSValue
     TRttiType, // tkRefToProcVar
     TRttiInterfaceType, // tkInterface
@@ -1581,7 +1594,7 @@ function TRTTIContext.GetTypes: specialize TArray<TRttiType>;
 var
   ModuleName, ClassName: String;
 
-  ModuleTypes: TJSObject;
+  ModuleTypes: TSectionRTTI;
 
 begin
   for ModuleName in TJSObject.Keys(pas) do
@@ -1589,7 +1602,7 @@ begin
     ModuleTypes := TTypeInfoModule(pas[ModuleName]).RTTI;
 
     for ClassName in ModuleTypes do
-      if TJSObject(ModuleTypes[ClassName]).HasOwnProperty('name') and (ClassName[1] <> '$') then
+      if ClassName[1] <> '$' then
         GetType(PTypeInfo(ModuleTypes[ClassName]));
   end;
 
@@ -2092,6 +2105,26 @@ end;
 function TRttiType.GetQualifiedName: String;
 begin
   Result := Format('%s.%s', [DeclaringUnitName, Name]);
+end;
+
+{ TRttiPointerType }
+
+constructor TRttiPointerType.Create(AParent: TRttiObject; ATypeInfo: PTypeInfo);
+begin
+  if not (TTypeInfo(ATypeInfo) is TTypeInfoPointer) then
+    raise EInvalidCast.Create('');
+
+  inherited;
+end;
+
+function TRttiPointerType.GetRefType: TRttiType;
+begin
+  Result := Pool.GetType(RefTypeInfo.RefType);
+end;
+
+function TRttiPointerType.GetRefTypeInfo: TTypeInfoPointer;
+begin
+  Result := TTypeInfoPointer(inherited Handle);
 end;
 
 { TVirtualInterface }

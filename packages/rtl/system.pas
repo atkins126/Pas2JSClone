@@ -111,11 +111,12 @@ type
   end;
   TGUIDString = type string;
 
-  PMethod = ^TMethod;
   TMethod = record
     Code : CodePointer;
     Data : Pointer;
   end;
+
+  PMethod = ^TMethod;
 
   TClass = class of TObject;
 

@@ -25,14 +25,16 @@ type
   TCallConv = (ccReg, ccCdecl, ccPascal, ccStdCall, ccSafeCall, ccCppdecl,
     ccFar16, ccOldFPCCall, ccInternProc, ccSysCall, ccSoftFloat, ccMWPascal);
 
+  TTypeInfoModule = class;
 
   { TSectionRTTI }
-  TSectionRTTI = class external name 'rtl.tSectionRTTI'(TJSObject)
+  TSectionRTTI = class external name 'rtl.tSectionRTTI' (TJSObject)
+    Module: TTypeInfoModule external name '$module';
   end;
 
   { TTypeInfoModule }
 
-  TTypeInfoModule = class external name 'pasmodule'(TJSObject)
+  TTypeInfoModule = class external name 'Object'
   public
     Name: String external name '$name';
     RTTI: TSectionRTTI external name '$rtti';
