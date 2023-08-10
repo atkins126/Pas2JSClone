@@ -122,6 +122,7 @@ Type
     Function CreateQueryParams : TQueryParams; virtual;
     function GetURLQueryParams(IsRead : Boolean): string; virtual;
     function DataPacketReceived(ARequest: TDataRequest): Boolean; override;
+    function DoResolveRecordUpdate(anUpdate : TRecordUpdateDescriptor): Boolean; override;
     function GetStringFieldLength(F: TJSObject; AName: String; AIndex: Integer): integer;virtual;
     function StringToFieldType(S: String): TFieldType; virtual;
     Function DoGetDataProxy: TDataProxy; override;
@@ -751,6 +752,46 @@ begin
     Result:=A.Length>0;
     AddToRows(A);
     end;
+end;
+
+function TSQLDBRestDataset.DoResolveRecordUpdate(anUpdate: TRecordUpdateDescriptor): Boolean;
+
+Var
+  rIdx,I : Integer;
+  Fld : TField;
+  rawData : JSValue;
+  Data : TJSArray absolute rawData;
+  ResRow : TJSObject;
+  aNew,aOld,aRow : JSValue;
+  FN : String;
+
+begin
+  Result:=True;
+  if Assigned(anupDate.ServerData) and (anUpdate.Status<>usDeleted) then
+     begin
+     rIdx:=NativeInt(anUpdate.Bookmark.Data);
+     if Not (rIdx>=0) and (rIdx<Rows.Length) then
+        exit;
+     // Apply new values
+     aRow:=Rows[rIdx];
+     ResRow:=TJSJSON.parseObject(String(anUpdate.ServerData));
+     RawData:=ResRow.Properties[Connection.DataProperty];
+     if IsArray(RawData) and (Data.Length=1) and IsObject(Data[0]) then
+       begin
+       ResRow:=TJSObject(Data[0]);
+       for FN in TJSObject.getOwnPropertyNames(resRow) do
+         begin
+         Fld:=FindField(FN);
+         if Assigned(Fld) then
+            begin
+            aNew:=resRow.Properties[FN];
+            aOld:=FieldMapper.GetJSONDataForField(Fld,aRow);
+            if (aOld<>aNew) then
+              FieldMapper.SetJSONDataForField(Fld,aRow,aNew);
+            end;
+         end;
+       end;
+     end;
 end;
 
 
