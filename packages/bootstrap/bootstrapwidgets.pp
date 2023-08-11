@@ -209,6 +209,7 @@ Type
   private
     FHideEl : TJSHTMLElement;
     FBackDrop: Boolean;
+    FStaticBackDrop: Boolean;
     FFocus: Boolean;
     FKeyBoard: Boolean;
     FOnHide: TOnModalHideEvent;
@@ -245,6 +246,7 @@ Type
   Published
     Property ShowOnRender: Boolean Read FShowOnRender Write FShowOnrender;
     Property BackDrop : Boolean Read FBackDrop Write FBackDrop;
+    Property StaticBackDrop : Boolean Read FStaticBackdrop Write FStaticBackDrop;
     Property KeyBoard : Boolean Read FKeyBoard Write FKeyBoard;
     Property Focus : Boolean Read FFocus Write FFocus;
     Property Template : String Read FTemplate Write SetTemplate;
@@ -858,15 +860,22 @@ end;
 
 procedure TBootstrapModal.ApplyWidgetSettings(aElement: TJSHTMLElement);
 
+Var
+  Opt : TJSObject;
+
 begin
   if FixedElementID and FJQueryInitialized then
     exit;
-  JQuery(aElement).modal(New([
-    'backdrop', BackDrop,
-    'keyboard', keyboard,
-    'focus',Focus,
-    'show',ShowOnRender
-  ]));
+  Opt:=New([
+      'keyboard', keyboard,
+      'focus',Focus,
+      'show',ShowOnRender
+  ]);
+  if StaticBackDrop then
+    Opt.Properties['backdrop']:='static'
+  else 
+    Opt.Properties['backdrop']:=BackDrop;  
+  JQuery(aElement).modal(Opt);  
   jQuery(aElement).on_('hidden.bs.modal',@BootstrapHide);
   jQuery(aElement).on_('shown.bs.modal',@BootstrapShow);
   FJQueryInitialized:=True;
