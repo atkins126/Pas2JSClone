@@ -6,7 +6,7 @@ Unit webaudio;
 
 interface
 
-uses SysUtils, JS,web,types;
+uses SysUtils, JS, weborworker, web, types;
 
 {
   Automatically generated file by TWebIDLToPas on 2018-06-23 10:52:00
