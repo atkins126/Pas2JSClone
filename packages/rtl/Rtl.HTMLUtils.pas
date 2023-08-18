@@ -97,6 +97,7 @@ Type
     procedure AddClass(Const aClass: String); overload;
     procedure RemoveClass(Const aClass: String); overload;
     procedure AddRemoveClass(Const aAddClass, aRemoveClass: String); overload;
+    procedure AddOrRemoveClass(const DoAdd : Boolean; Const aClass: String); overload;
     function HasClass(const aClass: String): Boolean;
     Property InputValue: String Read GetInputValue Write SetInputValue;
     Property IsChecked : Boolean Read GetIsChecked Write SetIsChecked;
@@ -366,6 +367,15 @@ begin
     ClassList.add(aAddClass);
     ClassList.Remove(aRemoveClass);
     end;
+end;
+
+procedure TJSHTMLElementHelper.AddOrRemoveClass(const DoAdd: Boolean; const aClass: String);
+begin
+  If Assigned(Self) then
+    if DoAdd then
+      ClassList.add(aClass)
+    else
+      ClassList.Remove(aClass);
 end;
 
 function TJSHTMLElementHelper.GetData(aName: String): String;
