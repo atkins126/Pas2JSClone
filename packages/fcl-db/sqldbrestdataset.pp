@@ -764,9 +764,11 @@ Var
   ResRow : TJSObject;
   aNew,aOld,aRow : JSValue;
   FN : String;
+  HasChange : Boolean;
 
 begin
   Result:=True;
+  HasChange:=False;
   if Assigned(anupDate.ServerData) and (anUpdate.Status<>usDeleted) then
      begin
      rIdx:=NativeInt(anUpdate.Bookmark.Data);
@@ -787,11 +789,16 @@ begin
             aNew:=resRow.Properties[FN];
             aOld:=FieldMapper.GetJSONDataForField(Fld,aRow);
             if (aOld<>aNew) then
+              begin
               FieldMapper.SetJSONDataForField(Fld,aRow,aNew);
+              HasChange:=True;
+              end;
             end;
          end;
        end;
      end;
+  if HasChange then
+    DataEvent(deRecordChange,Nil);
 end;
 
 
