@@ -244,6 +244,8 @@ type
     FSize: NativeInt; external name 'size';
     FType: string; external name  'type';
   Public
+    constructor New(AArray: JSValue); overload;
+    constructor New(AArray: JSValue; AOptions: TJSObject); overload;
     procedure close;
     function slice : TJSBlob; overload;
     function slice(aStart : NativeInt) : TJSBlob; overload;

@@ -1825,6 +1825,8 @@ TEventListenerEvent = class external name 'EventListener_Event' (TJSObject)
     FLastModifiedDate: TJSDate; external name 'lastModifiedDate';
     FName: string; external name 'name';
   public
+    constructor New(ABits: JSValue; AName: string); overload;
+    constructor New(ABits: JSValue; AName: string; AOptions: TJSObject); overload;
     property lastModified: NativeInt read FLastModified;
     property lastModifiedDate : TJSDate read FLastModifiedDate; deprecated;
     property name: String read FName;
